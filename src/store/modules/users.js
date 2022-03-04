@@ -16,11 +16,11 @@ const state = {
     async getUsers({commit}){
         try {
             const res = await api.get('users/anJV1pzv98954kD');
-            console.log(res);
+            console.log(res.data.data);
+            commit('allusers', res.data.data)
         } catch (error) {
             console.log(error)
         }
-      commit('allusers', res.data)
     },
   };
 

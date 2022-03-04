@@ -12,28 +12,23 @@
 
       <v-spacer></v-spacer>
 
-      <v-btn icon>
-        <p style="color: black">$9000.00</p>
-      </v-btn>
-
-      <v-btn icon>
-        <!-- <v-icon>mdi-dots-vertical</v-icon> -->
-      </v-btn>
-
       <template v-slot:extension>
         <v-tabs
           v-model="tab"
           align-with-title
         >
           <v-tabs-slider color="yellow"></v-tabs-slider>
-
           <v-tab
             v-for="item in items"
             :key="item"
             style="color: black; text-transform: capitalize"
+            @click="handleTabs(item)"
           >
             {{ item }}
           </v-tab>
+      <v-btn class="offset-6" style="background: none; border: none; box-shadow: none; color: #6D5BD0; font-weight: bolder; font-size: 20px; right: 30px">
+             $9000.00
+            </v-btn>
         </v-tabs>
       </template>
     </v-toolbar>
@@ -43,17 +38,13 @@
         v-for="item in items"
         :key="item"
       >
-        <v-card flat v-if="item === 'All'">
-          <v-card-text v-text="text"></v-card-text>
+        <v-card flat>
         </v-card>
-        <v-card flat v-if="item === 'Paid'">
-          <v-card-text v-text="text1"></v-card-text>
+        <v-card flat>
         </v-card>
-        <v-card flat v-if="item === 'Unpaid'">
-          <v-card-text v-text="text2"></v-card-text>
+        <v-card flat>
         </v-card>
-          <v-card flat v-if="item === 'Overview'">
-          <v-card-text v-text="text3"></v-card-text>
+          <v-card flat>
         </v-card>
       </v-tab-item>
     </v-tabs-items>
@@ -66,33 +57,34 @@
 
 <script>
 
-import {mapActions, mapGetters} from "vuex"
-
 export default {
   name: 'App',
-
    data () {
      return {
        tab: null,
         items: [
-          'All', 'Paid', 'Unpaid', 'Overview',
+          'All', 'Paid', 'Unpaid', 'Overdue',
         ],
-        text: '1Loremty ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-        text1: '2Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-        text2: '3Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-        text3: '4Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+     }
+   },
+   methods: {
+       handleTabs (item) {
+         if (item === "All") {
+            this.$router.push('/')
+         }
+         if (item === "Paid") {
+            this.$router.push('/paid_users')
+         }
+         if (item === "Unpaid") {
+            this.$router.push('/unpaid_users')
+         }
+         if (item === "Overdue") {
+            this.$router.push('/overdue_users')
+         }
+          // console.log(item)
       }
-    },
-    computed: mapGetters(['allUsers']),
-
-    methods: {
-         ...mapActions(['addfood']),
-    },
-    mounted(){
-        console.log(this.$store.getters.allUsers);
-    }
-    //
-};
+   }
+}
 </script>
 
 <style scoped>
