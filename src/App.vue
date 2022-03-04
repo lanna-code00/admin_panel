@@ -26,9 +26,7 @@
           >
             {{ item }}
           </v-tab>
-      <v-btn class="offset-6" style="background: none; border: none; box-shadow: none; color: #6D5BD0; font-weight: bolder; font-size: 20px; right: 30px">
-             $9000.00
-            </v-btn>
+
         </v-tabs>
       </template>
     </v-toolbar>

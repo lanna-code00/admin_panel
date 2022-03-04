@@ -2,6 +2,26 @@
   <v-card >
       <v-card-title>
           <v-container class="box m-3" fluid>
+              <!-- <div class="float-right">
+                  <v-btn  style="background: none; border: none; box-shadow: none; color: #6D5BD0; font-weight: bolder; font-size: 20px; right: 30px">
+                  $9000.00
+                  </v-btn>
+              </div> -->
+
+               <div class="text-right">
+                  <v-chip
+                    class="mr-5 mb-4"
+                     style="background: none; border: none; box-shadow: none; color: #6D5BD0; font-weight: bolder; font-size: 20px; right: 30px"
+                  >
+                    {{ (totalPayment).toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            }) }}
+                  </v-chip>
+
+                </div>
+                <!-- <v-row class="float-right">
+                </v-row>   -->
                 <v-row>
                 <v-col
                     class="d-flex"
@@ -39,6 +59,7 @@
                         tile
                         color="#6D5BD0"
                         style="color: white; font-weight: bold"
+                        @click="markPayments(marks.id, marks.status)"
                         >
                         PAY DUES
                         </v-btn>
@@ -69,13 +90,13 @@
           </th>
         </tr>
       </thead>
-      <tbody v-for="item in desserts"
+      <tbody v-for="item in filteredList"
           :key="item.id">
         <tr>
         
           <td>
                 <v-checkbox
-                @click="showDetails(item.id)"
+                @click="showDetails(item.id, item.paymentStatus)"
                 v-model="$data[checkbox.id === item.id ? true : checkbox.status]">
                 </v-checkbox>
             </td>
@@ -205,6 +226,7 @@ import api from '@/services/api'
       details: {status: false, id: null},
       desserts: [],
       editedIndex: -1,
+      marks: {id: null, status: ''},
       activities: [],
       cruds: {
         title1: 'Edit',
@@ -230,9 +252,18 @@ import api from '@/services/api'
     }),
 
     computed: {
-      formTitle () {
-        return this.editedIndex === -1 ? 'New Item' : 'Edit Item'
+      filteredList() {
+      return this.desserts.filter(post => {
+        return post.firstName.toLowerCase().includes(this.search.toLowerCase()) || post.lastName.toLowerCase().includes(this.search.toLowerCase()) || post.email.toLowerCase().includes(this.search.toLowerCase());
+       })
       },
+
+      totalPayment() {
+        return this.desserts.reduce(
+        (previousValue, currentValue) => previousValue + currentValue.amountInCents,
+        0
+      )
+      }
     },
 
     watch: {
@@ -255,9 +286,31 @@ import api from '@/services/api'
           catch((err) => err.error)
       },
 
-      showDetails (id) {
+      showDetails (id, status) {
           this.checkbox.id = id
          this.checkbox.status = true
+         this.marks.id = id
+         this.marks.status = status
+      },
+
+      markPayments(userId, status){
+         if (status === "unpaid") {
+           api.patch(`mark-paid/${userId}`)
+          .then((response) => {
+            if (response.data.status) {
+              this.cruds.title3 = "Deativate User"
+            }
+          })
+          .catch((err) => console.log(err))
+        } else {
+          api.patch(`mark-unpaid/${userId}`)
+          .then((response) => {
+             if (response.data.status) {
+              this.cruds.title3 = "Activate User"
+            }
+          })
+          .catch((err) => console.log(err))
+        }
       },
 
       showTable (id, user) {
