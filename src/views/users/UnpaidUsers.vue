@@ -1,5 +1,9 @@
 <template>
   <v-card >
+         <v-progress-linear v-show="loading"
+      indeterminate
+      color="#6D5BD0"
+    ></v-progress-linear>
       <v-card-title>
           <v-container class="box m-3" fluid>
               <!-- <div class="float-right">
@@ -28,11 +32,27 @@
                     cols="12"
                     sm="2"
                 >
-                    <v-select
-                    :items="desserts"
-                    label="Solo field"
-                    solo
-                    ></v-select>
+                  <div class="text-center">
+                        <v-menu offset-y>
+                        <template v-slot:activator="{ on, attrs }">
+                            <v-btn
+                            v-bind="attrs"
+                            v-on="on"
+                            style="box-shadow: none; border: 1px solid #8B83BA; background: none"
+                            >
+                            <i class="fas fa-filter mr-3" style="color: #8B83BA"></i> Filter
+                            </v-btn>
+                        </template>
+                        <v-list>
+                            <v-list-item
+                            v-for="(item, index) in sorts"
+                            :key="index"
+                            >
+                            <v-list-item-title style="cursor: pointer" @click="sortTable(item)">{{ item }}</v-list-item-title>
+                            </v-list-item>
+                        </v-list>
+                        </v-menu>
+                    </div>
                 </v-col>
 
                   <v-col
@@ -62,6 +82,13 @@
                         @click="markPayments(marks.id, marks.status)"
                         >
                         PAY DUES
+                     <v-progress-circular
+                            indeterminate
+                            color="white"
+                            class="ml-3"
+                            size=20
+                            v-show="loading_pay"
+                          ></v-progress-circular>
                         </v-btn>
                 </v-col>
             </v-row>
@@ -86,7 +113,7 @@
             AMOUNT
           </th>
           <th class="text-left">
-              <i class="fas fa-ellipsis-v" style="left: 40px"></i>
+            ACTIONS  <i class="fas fa-ellipsis-v" style="left: 40px"></i>
           </th>
         </tr>
       </thead>
@@ -157,11 +184,7 @@
                     <v-list-item-title style="cursor: pointer; padding: 10px">{{cruds.title1}}</v-list-item-title>
                     <v-list-item-title style="cursor: pointer; padding: 10px">{{cruds.title2}}</v-list-item-title>
                     <v-list-item-title style="cursor: pointer; padding: 10px; color: green" @click="userActivate(item.userStatus, item.id)">{{item.userStatus === 'inactive' ? cruds.title3 : 'Deactivate User'}}</v-list-item-title>
-                    <v-list-item-title style="cursor: pointer; padding: 10px; color: red">{{cruds.title4}}</v-list-item-title>
-                    <!-- <v-list-item-title v-if="list.title === 'View Profile'" style="cursor: pointer">{{list.title}}</v-list-item-title>
-                    <v-list-item-title  style="cursor: pointer; color: green">{{ item.userStatus === 'inactive' ? 'Activate User' : 'Deactivate User' }}</v-list-item-title>
-                    <v-list-item-title v-if="list.title === 'Delete'" style="cursor: pointer; color: red">{{ list.title }}</v-list-item-title> -->
-                    <!-- </v-list-item> -->
+                    <v-list-item-title style="cursor: pointer; padding: 10px; color: red" @click="callDeleteModal(item.id, item.firstName, item.lastName)">{{cruds.title4}}</v-list-item-title>
                 </v-list>
               </v-menu>
         </td>
@@ -209,6 +232,42 @@
   </v-simple-table>
   </v-container>
 
+  <v-row justify="center">
+    <v-dialog
+      v-model="dialog"
+      width="600px"
+    >
+      <v-card>
+        <v-card-title>
+          <span class="">{{ details.userText }}</span>
+        </v-card-title>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            color="green darken-1"
+            text
+            @click="dialog = false"
+          >
+            CANCEL
+          </v-btn>
+          <v-btn
+            color="green darken-1"
+            text
+            @click="deleteUser(details.id, details.firstName, details.lastName)"
+          >
+            DELETE   <v-progress-circular
+                            indeterminate
+                            color="white"
+                            class="ml-3"
+                            size=20
+                            v-show="delete_success"
+                          ></v-progress-circular>
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </v-row>
+
     </v-card-title>
 
     
@@ -221,34 +280,23 @@ import api from '@/services/api'
     data: () => ({
       dialog: false,
       search: "",
+      delete_success: false,
       dialogDelete: false,
       checkbox: {status: false, id: null},
-      details: {status: false, id: null},
+      details: {status: false, id: null, userText: '', firstName: '', lastName: ''},
       desserts: [],
-      editedIndex: -1,
       marks: {id: null, status: ''},
       activities: [],
+      loading: true,
+      loading_pay: false,
       cruds: {
         title1: 'Edit',
         title2: 'View Profile',
         title3: 'Activate User',
         title4: 'Delete'
       },
+      sorts : ['First Name', 'Last Name', 'E-mail'],
       activateId: null,
-      editedItem: {
-        name: '',
-        calories: 0,
-        fat: 0,
-        carbs: 0,
-        protein: 0,
-      },
-      defaultItem: {
-        name: '',
-        calories: 0,
-        fat: 0,
-        carbs: 0,
-        protein: 0,
-      },
     }),
 
     computed: {
@@ -266,22 +314,60 @@ import api from '@/services/api'
       }
     },
 
-    watch: {
-      dialog (val) {
-        val || this.close()
-      },
-      dialogDelete (val) {
-        val || this.closeDelete()
-      },
-    },
-
     methods: {
       initialize () {
           api.get("users/anJV1pzv98954kD").
           then((response) => {
-            this.desserts = response.data.data.filter((paid) => paid.paymentStatus === "unpaid")
+            if (response.data.status === true) {
+                this.desserts = response.data.data.filter((paid) => paid.paymentStatus === "unpaid")
+              this.loading = false
+            } else {
+              this.loading = true
+            }
           }).
           catch((err) => err.error)
+      },
+
+      sortTable(name){
+          if (name === 'First Name') {
+              this.desserts.sort(function(a, b) {
+                let nameA = a.firstName.toUpperCase();
+                let nameB = b.firstName.toUpperCase(); 
+                if (nameA < nameB) {
+                    return -1;
+                }
+                if (nameA > nameB) {
+                    return 1;
+                }
+                return 0;
+                });
+          }
+           if (name === 'Last Name') {
+              this.desserts.sort(function(a, b) {
+                let nameA = a.lastName.toUpperCase();
+                let nameB = b.lastName.toUpperCase(); 
+                if (nameA < nameB) {
+                    return -1;
+                }
+                if (nameA > nameB) {
+                    return 1;
+                }
+                return 0;
+                });
+          }
+           if (name === 'E-mail') {
+                this.desserts.sort(function(a, b) {
+                let nameA = a.email.toUpperCase();
+                let nameB = b.email.toUpperCase(); 
+                if (nameA < nameB) {
+                    return -1;
+                }
+                if (nameA > nameB) {
+                    return 1;
+                }
+                return 0;
+                });
+          }
       },
 
       showDetails (id, status) {
@@ -292,19 +378,23 @@ import api from '@/services/api'
       },
 
       markPayments(userId, status){
+        this.loading_pay = true
          if (status === "unpaid") {
            api.patch(`mark-paid/${userId}`)
           .then((response) => {
-            if (response.data.status) {
+            if (response.data.status === true) {
               this.cruds.title3 = "Deativate User"
+              this.loading_pay = false
             }
           })
           .catch((err) => console.log(err))
         } else {
           api.patch(`mark-unpaid/${userId}`)
           .then((response) => {
-             if (response.data.status) {
+             if (response.data.status ) {
               this.cruds.title3 = "Activate User"
+              this.loading_pay = false
+
             }
           })
           .catch((err) => console.log(err))
@@ -321,6 +411,30 @@ import api from '@/services/api'
              this.details.status = true
 
          }
+      },
+
+      callDeleteModal(userId, firstName, lastName){
+         this.details.id = userId
+         this.dialog = true
+         this.details.firstName = firstName
+         this.details.lastName = lastName
+        this.details.userText = `Are you sure you want to delete this user "${firstName} ${lastName}"`
+      },
+
+      deleteUser(id, firstName, lastName){
+        this.delete_success = true
+         api.delete(`remove-user/${id}`)
+          .then((response) => {
+            if (response.data.status) {
+              this.dialog = false
+        this.delete_success = false
+
+            }
+          })
+          .catch((err) => {
+        this.delete_success = false
+
+          })
       },
 
       userActivate(userStatus, userId) {
@@ -342,48 +456,6 @@ import api from '@/services/api'
           })
           .catch((err) => console.log(err))
         }
-      },
-
-      editItem (item) {
-        this.editedIndex = this.desserts.indexOf(item)
-        this.editedItem = Object.assign({}, item)
-        this.dialog = true
-      },
-
-      deleteItem (item) {
-        this.editedIndex = this.desserts.indexOf(item)
-        this.editedItem = Object.assign({}, item)
-        this.dialogDelete = true
-      },
-
-      deleteItemConfirm () {
-        this.desserts.splice(this.editedIndex, 1)
-        this.closeDelete()
-      },
-
-      close () {
-        this.dialog = false
-        this.$nextTick(() => {
-          this.editedItem = Object.assign({}, this.defaultItem)
-          this.editedIndex = -1
-        })
-      },
-
-      closeDelete () {
-        this.dialogDelete = false
-        this.$nextTick(() => {
-          this.editedItem = Object.assign({}, this.defaultItem)
-          this.editedIndex = -1
-        })
-      },
-
-      save () {
-        if (this.editedIndex > -1) {
-          Object.assign(this.desserts[this.editedIndex], this.editedItem)
-        } else {
-          this.desserts.push(this.editedItem)
-        }
-        this.close()
       },
     },
     mounted () {
